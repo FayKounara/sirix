@@ -4,35 +4,61 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 buildscript {
     ext.kotlin_version = '1.9.22'
     repositories {
-        maven {
-            url "https://plugins.gradle.org/m2/"
+    maven {
+        url "https://plugins.gradle.org/m2/"
+    }
+    
+    maven {
+        url "https://oss.sonatype.org/content/repositories/snapshots/"
+        mavenContent {
+            snapshotsOnly()
         }
     }
+    
+}
+    
     dependencies {
         classpath "gradle.plugin.org.kt3k.gradle.plugin:coveralls-gradle-plugin:2.12.2"
         classpath 'net.researchgate:gradle-release:3.0.2'
         classpath "com.github.ben-manes:gradle-versions-plugin:0.51.0"
         classpath "gradle.plugin.com.github.jengelman.gradle.plugins:shadow:7.0.0"
+        //classpath "com.github.johnrengelman:shadow:8.1.1"
         classpath "com.diffplug.spotless:spotless-plugin-gradle:6.25.0"
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+       
     }
+   
 }
 
 plugins {
     id "org.sonarqube" version "4.4.1.3373"
+    id "java"
+    id "net.researchgate.release" version "3.0.2"
 }
 
+
+
+dependencies {
+        runtimeOnly("io.sirix:sirix-core:0.11.1")
+        runtimeOnly group: 'io.sirix', name: 'sirix-query', version: '0.11.1'
+        implementation group: 'io.sirix', name: 'sirix-rest-api', version: '0.11.1'
+        implementation group: 'io.sirix', name: 'brackit', version: '0.5'
+
+        
+    }
 sonarqube {
     properties {
+        property "sonar.gradle.skipCompile", "true"
         property "sonar.projectKey", "sirixdb_sirix"
         property "sonar.organization", "sirixdb"
         property "sonar.host.url", "https://sonarcloud.io"
     }
 }
 
-apply from: "${rootDir}/libraries.gradle"
+apply from: "${projectDir}/libraries.gradle"
+apply plugin: "net.researchgate.release"
 
-apply plugin: 'net.researchgate.release'
+
 
 release {
     failOnSnapshotDependencies = false
@@ -98,14 +124,17 @@ subprojects {
         toolchain {
             languageVersion = JavaLanguageVersion.of(21)
         }
+        
     }
-
+    compileJava {
+    options.compilerArgs += ["--enable-preview"]
+    }
 
     javadoc {
         failOnError = false
         options {
             addStringOption('-release', '21')
-            addBooleanOption('-enable-preview', true)
+            addBooleanOption('--enable-preview', true)
         }
     }
 
@@ -134,16 +163,6 @@ subprojects {
         }
     }
 
-//    jacoco {
-//        toolVersion = "0.8.7"
-//    }
-//
-//    jacocoTestReport {
-//        reports {
-//            xml.enabled = true
-//            html.enabled = true
-//        }
-//    }
 
     publishing {
         publications {
@@ -207,9 +226,7 @@ subprojects {
     }
 
     signing {
-        //def signingKey = System.getenv("OSSRH_GPG_SECRET_KEY")
-        //def signingPassword = System.getenv("OSSRH_GPG_SECRET_KEY_PASSWORD")
-        //useInMemoryPgpKeys(signingKey, signingPassword)
+       
         required { isReleaseVersion }
         sign publishing.publications.maven
     }
@@ -286,22 +303,3 @@ subprojects {
         maxHeapSize = '8g'
     }
 }
-
-//task jacocoRootReport(type: JacocoReport) {
-//    description = 'Generates an aggregate report from all subprojects'
-//    dependsOn = subprojects.test
-//    sourceDirectories.setFrom files(subprojects.sourceSets.main.allSource.srcDirs)
-//    classDirectories.setFrom files(subprojects.sourceSets.main.output)
-//    executionData.setFrom files(subprojects.jacocoTestReport.executionData).filter {
-//        file -> file.exists()
-//    }.asList()
-//    reports {
-//        html.enabled = true
-//        xml.enabled = true
-//    }
-//}
-//
-//coveralls {
-//    sourceDirs = subprojects.sourceSets.main.allSource.srcDirs.flatten()
-//    jacocoReportPath = "${buildDir}/reports/jacoco/jacocoRootReport/jacocoRootReport.xml"
-//}
